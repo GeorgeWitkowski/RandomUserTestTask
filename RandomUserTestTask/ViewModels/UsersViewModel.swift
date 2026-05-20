@@ -25,11 +25,14 @@ final class UsersViewModel {
     private let networkService: NetworkServiceProtocol
     
     private let cacheKey = "saved_users_cache"
+    private let blacklistKey = "deleted_users_blacklist"
+    private var deletedUserIDs: Set<String> = []
     
     // MARK: - Initialization
     
     init(networkService: NetworkServiceProtocol = NetworkService()) {
         self.networkService = networkService
+        loadBlacklist()
     }
     
     // MARK: - Actions
@@ -47,6 +50,7 @@ final class UsersViewModel {
         isLoading = true
         errorMessage = nil
         currentPage = 1
+        
         defer { isLoading = false }
         
         do {
@@ -104,6 +108,33 @@ final class UsersViewModel {
         }
     }
     
+    private func saveBlacklist() {
+        do {
+            let data = try JSONEncoder().encode(deletedUserIDs)
+            UserDefaults.standard.set(data, forKey: blacklistKey)
+        } catch {
+            print("Failed to save blacklist: \(error)")
+        }
+    }
+    
+    private func loadBlacklist() {
+        guard let data = UserDefaults.standard.data(forKey: blacklistKey) else { return }
+        if let decoded = try? JSONDecoder().decode(Set<String>.self, from: data) {
+            deletedUserIDs = decoded
+        }
+    }
+    
+    // MARK: - Delete Logic
+
+    func deleteUser(_ user: User) {
+        users.removeAll { $0.id == user.id }
+        
+        deletedUserIDs.insert(user.id)
+        saveBlacklist()
+
+        saveUsersToCache(users)
+    }
+    
     // MARK: - Helper Methods
     
     private func removeDuplicates(from newUsers: [User]) -> [User] {
@@ -116,6 +147,13 @@ final class UsersViewModel {
         
         for user in newUsers {
             if !seenIDs.contains(user.id) {
+                seenIDs.insert(user.id)
+                uniqueUsers.append(user)
+            }
+        }
+        
+        for user in newUsers {
+            if !seenIDs.contains(user.id) && !deletedUserIDs.contains(user.id) {
                 seenIDs.insert(user.id)
                 uniqueUsers.append(user)
             }
