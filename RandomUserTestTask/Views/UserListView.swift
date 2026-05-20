@@ -25,6 +25,13 @@ struct UsersListView: View {
                     List {
                         ForEach(viewModel.users) { user in
                             UserRowView(user: user)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        viewModel.deleteUser(user)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                         }
                         
                         if !viewModel.users.isEmpty {
