@@ -11,7 +11,6 @@ import SwiftUI
 struct RandomUserTestTaskApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
         }
     }
 }
