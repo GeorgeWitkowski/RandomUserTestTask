@@ -24,6 +24,8 @@ final class UsersViewModel {
     
     private let networkService: NetworkServiceProtocol
     
+    private let cacheKey = "saved_users_cache"
+    
     // MARK: - Initialization
     
     init(networkService: NetworkServiceProtocol = NetworkService()) {
@@ -34,6 +36,12 @@ final class UsersViewModel {
     
     @MainActor
     func fetchInitialUsers() async {
+        if let cachedUsers = loadCachedUsers(), !cachedUsers.isEmpty {
+            self.users = cachedUsers
+            self.currentPage = (cachedUsers.count / resultsPerPage) + 1
+            return
+        }
+        
         guard users.isEmpty else { return }
         
         isLoading = true
@@ -44,11 +52,10 @@ final class UsersViewModel {
         do {
             let newUsers = try await networkService.fetchUsers(page: currentPage, resultsPerPage: resultsPerPage)
             self.users = removeDuplicates(from: newUsers)
+            saveUsersToCache(self.users)
         } catch {
             self.errorMessage = error.localizedDescription
         }
-        
-        isLoading = false
     }
     
     @MainActor
@@ -56,18 +63,44 @@ final class UsersViewModel {
         guard !isFetchingMore else { return }
         
         isFetchingMore = true
-        currentPage += 1
+        
+        let nextPage = currentPage + 1
+        
         defer { isFetchingMore = false }
         
         do {
-            let newUsers = try await networkService.fetchUsers(page: currentPage, resultsPerPage: resultsPerPage)
+            let newUsers = try await networkService.fetchUsers(page: nextPage, resultsPerPage: resultsPerPage)
             
             let uniqueNewUsers = removeDuplicates(from: newUsers)
             self.users.append(contentsOf: uniqueNewUsers)
             
+            self.currentPage = nextPage
+            saveUsersToCache(self.users)
+            
         } catch {
-            currentPage -= 1
             print("Failed to fetch next page: \(error.localizedDescription)")
+        }
+    }
+    
+    // MARK: - Persistence
+    
+    private func saveUsersToCache(_ users: [User]) {
+        do {
+            let data = try JSONEncoder().encode(users)
+            UserDefaults.standard.set(data, forKey: cacheKey)
+        } catch {
+            print("Failed to save users: \(error)")
+        }
+    }
+    
+    private func loadCachedUsers() -> [User]? {
+        guard let data = UserDefaults.standard.data(forKey: cacheKey) else { return nil }
+        
+        do {
+            return try JSONDecoder().decode([User].self, from: data)
+        } catch {
+            print("Failed to decode users: \(error)")
+            return nil
         }
     }
     
