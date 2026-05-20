@@ -16,11 +16,11 @@ final class UsersViewModel {
     var users: [User] = []
     
     var isLoading: Bool = false
+    var isFetchingMore = false
     var errorMessage: String? = nil
     
     private var currentPage: Int = 1
-    private let resultsPerPage: Int = 20
-    private var isFetchingNextPage: Bool = false
+    private let resultsPerPage: Int = 40
     
     private let networkService: NetworkServiceProtocol
     
@@ -39,6 +39,7 @@ final class UsersViewModel {
         isLoading = true
         errorMessage = nil
         currentPage = 1
+        defer { isLoading = false }
         
         do {
             let newUsers = try await networkService.fetchUsers(page: currentPage, resultsPerPage: resultsPerPage)
@@ -51,11 +52,12 @@ final class UsersViewModel {
     }
     
     @MainActor
-    func fetchNextPageIfNeeded(currentUser: User) async {
-        guard currentUser.id == users.last?.id, !isFetchingNextPage else { return }
+    func fetchNextPageIfNeeded() async {
+        guard !isFetchingMore else { return }
         
-        isFetchingNextPage = true
+        isFetchingMore = true
         currentPage += 1
+        defer { isFetchingMore = false }
         
         do {
             let newUsers = try await networkService.fetchUsers(page: currentPage, resultsPerPage: resultsPerPage)
@@ -64,10 +66,9 @@ final class UsersViewModel {
             self.users.append(contentsOf: uniqueNewUsers)
             
         } catch {
+            currentPage -= 1
             print("Failed to fetch next page: \(error.localizedDescription)")
         }
-        
-        isFetchingNextPage = false
     }
     
     // MARK: - Helper Methods
