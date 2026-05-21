@@ -132,4 +132,23 @@ final class UsersViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.isLoading, "Loading state should be false even after an error")
         XCTAssertNotNil(viewModel.errorMessage, "Error message should not be nil")
     }
+    
+    func testFetchNextPageIfNeeded_Success_AppendsUsers() async {
+        // Arrange
+        let initialUser = User.mock(first: "Alice", email: "alice@gmail.com")
+        viewModel.users = [initialUser]
+        
+        let newUser = User.mock(first: "Bob", email: "bob@gmail.com")
+        mockNetworkService.mockResult = .success([newUser])
+        
+        // Act
+        await viewModel.fetchNextPageIfNeeded()
+        
+        // Assert
+        XCTAssertEqual(mockNetworkService.fetchCallCount, 1, "Network service should be called once")
+        XCTAssertEqual(viewModel.users.count, 2, "New users should be appended to the existing array, not replace it")
+        XCTAssertEqual(viewModel.users.first?.email, "alice@gmail.com", "First user should still be Alice")
+        XCTAssertEqual(viewModel.users.last?.email, "bob@gmail.com", "Last user should be Bob")
+        XCTAssertFalse(viewModel.isFetchingMore, "isFetchingMore should be reset to false")
+    }
 }
