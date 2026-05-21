@@ -11,10 +11,30 @@ import Observation
 
 @Observable
 final class UsersViewModel {
-    // MARK: - Properties
-    
     var users: [User] = []
     
+    // MARK: - Search Properties
+    var searchText: String = "" {
+        didSet {
+            debounceSearch()
+        }
+    }
+    private var debouncedSearchText: String = ""
+    private var searchTask: Task<Void, Never>?
+
+    var filteredUsers: [User] {
+        if debouncedSearchText.isEmpty {
+            return users
+        }
+        
+        let query = debouncedSearchText.lowercased()
+        return users.filter { user in
+            user.fullName.lowercased().contains(query) ||
+            user.email.lowercased().contains(query)
+        }
+    }
+
+    // MARK: - State Properties
     var isLoading: Bool = false
     var isFetchingMore = false
     var errorMessage: String? = nil
@@ -24,6 +44,7 @@ final class UsersViewModel {
     
     private let networkService: NetworkServiceProtocol
     
+    // MARK: - Persistenct Properties
     private let cacheKey = "saved_users_cache"
     private let blacklistKey = "deleted_users_blacklist"
     private var deletedUserIDs: Set<String> = []
@@ -33,6 +54,21 @@ final class UsersViewModel {
     init(networkService: NetworkServiceProtocol = NetworkService()) {
         self.networkService = networkService
         loadBlacklist()
+    }
+    
+    // MARK: - Search Logic (Debounce)
+    private func debounceSearch() {
+        searchTask?.cancel()
+        
+        searchTask = Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            
+            guard !Task.isCancelled else { return }
+            
+            await MainActor.run {
+                self.debouncedSearchText = self.searchText
+            }
+        }
     }
     
     // MARK: - Actions

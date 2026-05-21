@@ -23,7 +23,7 @@ struct UsersListView: View {
                     }
                 } else {
                     List {
-                        ForEach(viewModel.users) { user in
+                        ForEach(viewModel.filteredUsers) { user in
                             UserRowView(user: user)
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                     Button(role: .destructive) {
@@ -34,7 +34,7 @@ struct UsersListView: View {
                                 }
                         }
                         
-                        if !viewModel.users.isEmpty {
+                        if !viewModel.users.isEmpty && viewModel.searchText.isEmpty {
                             HStack {
                                 Spacer()
                                 
@@ -62,6 +62,10 @@ struct UsersListView: View {
                 }
             }
             .navigationTitle("Users")
+            .searchable(
+                text: $viewModel.searchText,
+                prompt: "Search by name or email"
+            )
             .task {
                 if viewModel.users.isEmpty {
                     await viewModel.fetchInitialUsers()
