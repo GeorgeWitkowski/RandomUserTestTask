@@ -117,4 +117,19 @@ final class UsersViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.filteredUsers.count, 1, "Filter should apply after debounce time has passed")
         XCTAssertEqual(viewModel.filteredUsers.first?.name.first, "Alice", "Only Alice should remain in the filtered list")
     }
+    
+    func testFetchInitialUsers_NetworkError_SetsErrorMessage() async {
+        // Arrange
+        let expectedError = NSError(domain: "TestError", code: 500, userInfo: nil)
+        mockNetworkService.mockResult = .failure(expectedError)
+        
+        // Act
+        await viewModel.fetchInitialUsers()
+        
+        // Assert
+        XCTAssertEqual(mockNetworkService.fetchCallCount, 1, "Network service should be called")
+        XCTAssertTrue(viewModel.users.isEmpty, "Users array should remain empty on error")
+        XCTAssertFalse(viewModel.isLoading, "Loading state should be false even after an error")
+        XCTAssertNotNil(viewModel.errorMessage, "Error message should not be nil")
+    }
 }
