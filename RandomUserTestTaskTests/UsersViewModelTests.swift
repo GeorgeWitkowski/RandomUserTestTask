@@ -67,4 +67,30 @@ final class UsersViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.users[0].email, "john@gmail.com", "First user should be John")
         XCTAssertEqual(viewModel.users[1].email, "jane@gmail.com", "Second user should be Jane")
     }
+    
+    func testDeleteUser_AddsToBlacklistAndFiltersFromFutureFetches() async {
+        // Arrange
+        let userToKeep = User.mock(first: "Jane", email: "jane@gmail.com")
+        let userToDelete = User.mock(first: "John", email: "john@gmail.com")
+        viewModel.users = [userToKeep, userToDelete]
+        
+        // Act
+        viewModel.deleteUser(userToDelete)
+        
+        // Assert
+        XCTAssertEqual(viewModel.users.count, 1, "Users array should contain 1 user after deletion")
+        XCTAssertEqual(viewModel.users.first?.email, "jane@gmail.com", "Remaining user should be Jane")
+        
+        // Arrange (Setup for next page fetch)
+        let newUser = User.mock(first: "Bob", email: "bob@gmail.com")
+        mockNetworkService.mockResult = .success([userToDelete, newUser])
+        
+        // Act
+        await viewModel.fetchNextPageIfNeeded()
+        
+        // Assert
+        XCTAssertEqual(viewModel.users.count, 2, "Array should contain Jane and Bob, but not John")
+        XCTAssertFalse(viewModel.users.contains { $0.email == "john@gmail.com" }, "Deleted user should NOT be added back from network")
+        XCTAssertTrue(viewModel.users.contains { $0.email == "bob@gmail.com" }, "New user Bob should be added")
+    }
 }
