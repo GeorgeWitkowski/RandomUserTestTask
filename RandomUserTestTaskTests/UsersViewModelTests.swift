@@ -50,4 +50,21 @@ final class UsersViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.isLoading, "Loading state should be false after fetching")
         XCTAssertNil(viewModel.errorMessage, "Error message should be nil on success")
     }
+    
+    func testFetchInitialUsers_WithDuplicates_RemovesDuplicates() async {
+        // Arrange
+        let user1 = User.mock(first: "John", email: "john@gmail.com")
+        let user2 = User.mock(first: "Jane", email: "jane@gmail.com")
+        let duplicateUser = User.mock(first: "John Clone", email: "john@gmail.com")
+        
+        mockNetworkService.mockResult = .success([user1, user2, duplicateUser])
+        
+        // Act
+        await viewModel.fetchInitialUsers()
+        
+        // Assert
+        XCTAssertEqual(viewModel.users.count, 2, "Users array should contain only 2 unique users")
+        XCTAssertEqual(viewModel.users[0].email, "john@gmail.com", "First user should be John")
+        XCTAssertEqual(viewModel.users[1].email, "jane@gmail.com", "Second user should be Jane")
+    }
 }
