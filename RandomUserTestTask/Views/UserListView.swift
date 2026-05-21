@@ -24,14 +24,17 @@ struct UsersListView: View {
                 } else {
                     List {
                         ForEach(viewModel.filteredUsers) { user in
-                            UserRowView(user: user)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    Button(role: .destructive) {
-                                        viewModel.deleteUser(user)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
+                            NavigationLink(destination: UserDetailView(user: user)) {
+                                UserRowView(user: user)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            viewModel.deleteUser(user)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
                                     }
-                                }
+                            }
+                            
                         }
                         
                         if !viewModel.users.isEmpty && viewModel.searchText.isEmpty {
