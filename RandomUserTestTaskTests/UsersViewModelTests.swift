@@ -93,4 +93,28 @@ final class UsersViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.users.contains { $0.email == "john@gmail.com" }, "Deleted user should NOT be added back from network")
         XCTAssertTrue(viewModel.users.contains { $0.email == "bob@gmail.com" }, "New user Bob should be added")
     }
+    
+    func testSearchText_WithDebounce_FiltersUsers() async throws {
+        // Arrange
+        let user1 = User.mock(first: "Alice", email: "alice@gmail.com")
+        let user2 = User.mock(first: "Bob", email: "bob@gmail.com")
+        let user3 = User.mock(first: "Charlie", email: "charlie@gmail.com")
+        
+        viewModel.users = [user1, user2, user3]
+        
+        XCTAssertEqual(viewModel.filteredUsers.count, 3, "Initially, all users should be visible")
+        
+        // Act
+        viewModel.searchText = "ali"
+        
+        // Assert
+        XCTAssertEqual(viewModel.filteredUsers.count, 3, "Filter should not apply immediately due to debounce")
+        
+        // Act
+        try await Task.sleep(nanoseconds: 600_000_000)
+        
+        // Assert
+        XCTAssertEqual(viewModel.filteredUsers.count, 1, "Filter should apply after debounce time has passed")
+        XCTAssertEqual(viewModel.filteredUsers.first?.name.first, "Alice", "Only Alice should remain in the filtered list")
+    }
 }
