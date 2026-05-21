@@ -91,7 +91,7 @@ final class UsersViewModel {
         
         do {
             let newUsers = try await networkService.fetchUsers(page: currentPage, resultsPerPage: resultsPerPage)
-            self.users = removeDuplicates(from: newUsers)
+            self.users = removeDuplicatesAndDeleted(from: newUsers)
             saveUsersToCache(self.users)
         } catch {
             self.errorMessage = error.localizedDescription
@@ -111,7 +111,7 @@ final class UsersViewModel {
         do {
             let newUsers = try await networkService.fetchUsers(page: nextPage, resultsPerPage: resultsPerPage)
             
-            let uniqueNewUsers = removeDuplicates(from: newUsers)
+            let uniqueNewUsers = removeDuplicatesAndDeleted(from: newUsers)
             self.users.append(contentsOf: uniqueNewUsers)
             
             self.currentPage = nextPage
@@ -173,19 +173,12 @@ final class UsersViewModel {
     
     // MARK: - Helper Methods
     
-    private func removeDuplicates(from newUsers: [User]) -> [User] {
+    private func removeDuplicatesAndDeleted(from newUsers: [User]) -> [User] {
         var uniqueUsers = [User]()
         var seenIDs = Set<String>()
         
         for user in users {
             seenIDs.insert(user.id)
-        }
-        
-        for user in newUsers {
-            if !seenIDs.contains(user.id) {
-                seenIDs.insert(user.id)
-                uniqueUsers.append(user)
-            }
         }
         
         for user in newUsers {
